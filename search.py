@@ -42,8 +42,18 @@ def video_x_video_similarity(file_a, file_b):
   return 0
 
 def image_x_video_similarity(image, video):
-  # todo: implement
-  return 0
+  similarities_each_frame = []
+
+  while (video.isOpened()):
+    ret, frame = video.read()
+    if ret == False:
+      break
+
+    similarity = image_x_image_similarity(image, frame)
+    similarities_each_frame.append(similarity)
+  
+  video.release()
+  return np.mean(similarities_each_frame) if len(similarities_each_frame) > 0 else 0
 
 def image_x_image_similarity(file_a, file_b):
   file_a, file_b = resize_to_same_dimensions(file_a, file_b)
@@ -60,14 +70,19 @@ def is_image(filename):
   return (ext == '.jpg' or ext == '.jpeg' or ext == '.png')
 
 def read_file(filename):
-  # todo: add video support
   if (is_image(filename)):
     return cv2.imread(path.join(DATASET_DIRNAME, filename))
+
+  elif (is_video(filename)):
+    return cv2.VideoCapture(path.join(DATASET_DIRNAME, filename))
+
+  else:
+    raise Exception("Couldn't read file: invalid format. It must be either a video or an image.")
 
 def read_dataset_files(dirname):
   return listdir(dirname)
 
-# init function
+# main function
 def search(query_filename, threshold, max_items):
   similars = []
   dataset_filenames = read_dataset_files(DATASET_DIRNAME)
@@ -79,8 +94,6 @@ def search(query_filename, threshold, max_items):
 
     if (is_image(query_filename) and is_image(dataset_filename)):
       similarity = image_x_image_similarity(input, file)
-      # if (similarity >= threshold):
-      #   print('file: ', dataset_filename, 'similarity: ', similarity) #debug
 
     elif (is_image(query_filename) and is_video(dataset_filename)):
       similarity = image_x_video_similarity(input, file)
@@ -92,7 +105,6 @@ def search(query_filename, threshold, max_items):
       similarity = image_x_video_similarity(file, input)
 
     if (similarity >= threshold):
-      # similars.append({ 'file': file, 'similarity': similarity })
       similars.append({ 'similarity': similarity })
     
     if (len(similars) == max_items):
@@ -100,5 +112,5 @@ def search(query_filename, threshold, max_items):
 
   return sort_by_similarity(similars)
 
-search('1.jpg', 0.5, 5)
+search('video.mp4', 0.5, 5)
     
