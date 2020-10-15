@@ -40,26 +40,30 @@ def sort_by_similarity(items):
 
 def video_x_video_similarity(video_a, video_b):
   similarities = []
-  total_frames = [
-    int(video_a.get(cv2.CAP_PROP_FRAME_COUNT)),
-    int(video_b.get(cv2.CAP_PROP_FRAME_COUNT))
+
+  # Sort by frames count - shortest video comes first,
+  # longest video comes later
+  videos = [
+    { 'video': video_a, 'frames': int(video_a.get(cv2.CAP_PROP_FRAME_COUNT)) },
+    { 'video': video_b, 'frames': int(video_b.get(cv2.CAP_PROP_FRAME_COUNT)) },
   ]
-  total_frames.sort()
-  frame_step = total_frames[1] / total_frames[0]
+  videos.sort(key=lambda x: x['frames'])
 
-  if (video_a.isOpened() and video_b.isOpened()):
-    for frame_index in range(0, total_frames[0]):
-      success_a, frame_a = video_a.read()
+  frame_step = videos[1]['frames'] / videos[0]['frames']
 
-      pos_next_frame_video_b = math.floor(frame_step * frame_index)
-      video_b.set(cv2.CAP_PROP_POS_FRAMES, pos_next_frame_video_b)
-      success_b, frame_b = video_b.read()
+  if (videos[0]['video'].isOpened() and videos[1]['video'].isOpened()):
+    for frame_index in range(0, videos[0]['frames']):
+      success_shortest, frame_shortest = videos[0]['video'].read()
 
-      similarity = image_x_image_similarity(frame_a, frame_b)
+      pos_next_frame_longest_video = math.floor(frame_step * frame_index)
+      videos[1]['video'].set(cv2.CAP_PROP_POS_FRAMES, pos_next_frame_longest_video)
+      success_longest, frame_longest = videos[1]['video'].read()
+
+      similarity = image_x_image_similarity(frame_shortest, frame_longest)
       similarities.append(similarity)
 
-  video_a.release()
-  video_b.release()
+  videos[0]['video'].release()
+  videos[1]['video'].release()
   return np.mean(similarities) if len(similarities) > 0 else 0
 
 def image_x_video_similarity(image, video):
@@ -126,7 +130,7 @@ def search(query_filename, threshold, max_items):
       similarity = image_x_video_similarity(file, input)
 
     if (similarity >= threshold):
-      similars.append({ 'similarity': similarity })
+      similars.append({ 'filename': dataset_filename, 'similarity': similarity })
     
     if (len(similars) == max_items):
       break
@@ -134,4 +138,3 @@ def search(query_filename, threshold, max_items):
   return sort_by_similarity(similars)
 
 search('video.mp4', 0.5, 5)
-    
