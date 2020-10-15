@@ -2,6 +2,7 @@ from os import listdir, path
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import cv2
+import math
 
 ## CONSTANTS - CHANGE THEM FOR TESTING
 # DATASET_DIRNAME = '/content/drive/My Drive/UNIBH - Ciência da Computação/4 ano/2 Semestre/Computação Gráfica/Dataset/Video'
@@ -37,9 +38,29 @@ def sort_by_similarity(items):
   items.sort(reverse=True, key=get_similarity)
   return items
 
-def video_x_video_similarity(file_a, file_b):
-  # todo: implement
-  return 0
+def video_x_video_similarity(video_a, video_b):
+  similarities = []
+  total_frames = [
+    int(video_a.get(cv2.CAP_PROP_FRAME_COUNT)),
+    int(video_b.get(cv2.CAP_PROP_FRAME_COUNT))
+  ]
+  total_frames.sort()
+  frame_step = total_frames[1] / total_frames[0]
+
+  if (video_a.isOpened() and video_b.isOpened()):
+    for frame_index in range(0, total_frames[0]):
+      success_a, frame_a = video_a.read()
+
+      pos_next_frame_video_b = math.floor(frame_step * frame_index)
+      video_b.set(cv2.CAP_PROP_POS_FRAMES, pos_next_frame_video_b)
+      success_b, frame_b = video_b.read()
+
+      similarity = image_x_image_similarity(frame_a, frame_b)
+      similarities.append(similarity)
+
+  video_a.release()
+  video_b.release()
+  return np.mean(similarities) if len(similarities) > 0 else 0
 
 def image_x_video_similarity(image, video):
   similarities_each_frame = []
